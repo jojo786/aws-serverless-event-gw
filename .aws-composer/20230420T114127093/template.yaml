@@ -1,0 +1,217 @@
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  GetApplicationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: !Sub
+        - Stack ${AWS::StackName} Function ${ResourceName}
+        - ResourceName: GetApplicationsFunction
+      CodeUri: src/GetApplicationsFunction
+      Handler: handler.handler
+      Runtime: python3.9
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref applications
+          TABLE_ARN: !GetAtt applications.Arn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref applications
+  GetApplicationsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GetApplicationsFunction}
+  UpdateInstitutionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: !Sub
+        - Stack ${AWS::StackName} Function ${ResourceName}
+        - ResourceName: UpdateInstitutionFunction
+      CodeUri: src/UpdateInstitutionFunction
+      Handler: handler.handler
+      Runtime: python3.9
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
+  UpdateInstitutionFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${UpdateInstitutionFunction}
+  InstitutionToCASSNS:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        Source:
+          - com.dhet.unisa
+        DetailType:
+          - cas status update
+        detail:
+          institute:
+            - unisa
+      Targets:
+        - Id: StudentsSNSTopic
+          Arn: !Ref StudentsSNSTopic
+      EventBusName: dhet-cas
+  StudentsSNSTopic:
+    Type: AWS::SNS::Topic
+  EventBridgeToToSnsPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref StudentsSNSTopic
+      Topics:
+        - !Ref StudentsSNSTopic
+  UpdateInstitution:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source:
+          - aws.health
+      Targets:
+        - Id: !Ref UpdateInstitutionFunction
+          Arn: !GetAtt UpdateInstitutionFunction.Arn
+      EventBusName: dhet-cas
+  UpdateInstitutionToUpdateInstitutionFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt UpdateInstitutionFunction.Arn
+      Principal: !Sub events.${AWS::URLSuffix}
+      SourceArn: !GetAtt UpdateInstitution.Arn
+  InstitutionAPI:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: !Sub
+        - Stack ${AWS::StackName} Function ${ResourceName}
+        - ResourceName: InstitutionAPI
+      CodeUri: src/InstitutionAPI
+      Handler: handler.handler
+      Runtime: python3.9
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref applications
+          TABLE_ARN: !GetAtt applications.Arn
+          TABLE_NAME_2: !Ref applications
+          TABLE_ARN_2: !GetAtt applications.Arn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref applications
+        - DynamoDBCrudPolicy:
+            TableName: !Ref applications
+  InstitutionAPILogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${InstitutionAPI}
+  ToInstitutionAPIWits:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        detail:
+          institute:
+            - wits
+      EventBusName: dhet-cas
+      Targets:
+        - Id: !Ref InstitutionAPI
+          Arn: !GetAtt InstitutionAPI.Arn
+  ToInstitutionAPIWitsToInstitutionAPIPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt InstitutionAPI.Arn
+      Principal: !Sub events.${AWS::URLSuffix}
+      SourceArn: !GetAtt ToInstitutionAPIWits.Arn
+  ToInstitutionAPIUnisa:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        detail:
+          institute:
+            - unisa
+      EventBusName: dhet-cas
+      Targets:
+        - Id: !Ref InstitutionAPI
+          Arn: !GetAtt InstitutionAPI.Arn
+  ToInstitutionAPIUnisaToInstitutionAPIPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt InstitutionAPI.Arn
+      Principal: !Sub events.${AWS::URLSuffix}
+      SourceArn: !GetAtt ToInstitutionAPIUnisa.Arn
+  applications:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+  UpdateAppFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: !Sub
+        - Stack ${AWS::StackName} Function ${ResourceName}
+        - ResourceName: UpdateAppFunction
+      CodeUri: src/UpdateAppFunction
+      Handler: handler.handler
+      Runtime: python3.9
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref applications
+          TABLE_ARN: !GetAtt applications.Arn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref applications
+        - Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource:
+                - !GetAtt DHETCustomEventBus.Arn
+  UpdateAppFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${UpdateAppFunction}
+  DHETCustomEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: dhet-cas
+  MarketplaceAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub
+        - ${ResourceName} From Stack ${AWS::StackName}
+        - ResourceName: MarketplaceAPI
+      StageName: Prod
+      DefinitionBody:
+        openapi: '3.0'
+        info: {}
+        paths:
+          /request/{id}:
+            get:
+              responses: {}
+            post:
+              responses: {}
+      EndpointConfiguration: REGIONAL
+      TracingEnabled: true
