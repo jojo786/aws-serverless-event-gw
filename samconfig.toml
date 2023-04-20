@@ -1,0 +1,9 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "aws-serverless-event-gw"
+resolve_s3 = true
+s3_prefix = "aws-serverless-event-gw"
+region = "af-south-1"
+capabilities = "CAPABILITY_IAM"
+disable_rollback = true
+image_repositories = []

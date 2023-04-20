@@ -5,13 +5,14 @@ Resources:
     Properties:
       PolicyDocument:
         Statement:
-          - Effect: Allow
-            Principal:
-              Service: events.amazonaws.com
-            Action: sns:Publish
-            Resource: !Ref UsersSNSTopic
+        - Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: sns:Publish
+          Resource:
+            Ref: UsersSNSTopic
       Topics:
-        - !Ref UsersSNSTopic
+      - Ref: UsersSNSTopic
   MarketplaceCustomEventBus:
     Type: AWS::Events::EventBus
     Properties:
@@ -19,7 +20,8 @@ Resources:
   MarketplaceAPI:
     Type: AWS::Serverless::Api
     Properties:
-      Name: !Sub
+      Name:
+        Fn::Sub:
         - ${ResourceName} From Stack ${AWS::StackName}
         - ResourceName: MarketplaceAPI
       StageName: Prod
@@ -32,23 +34,26 @@ Resources:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
-                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetRequestsFunction.Arn}/invocations
+                uri:
+                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetRequestsFunction.Arn}/invocations
               responses: {}
             post:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
-                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateRequestsFunction.Arn}/invocations
+                uri:
+                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateRequestsFunction.Arn}/invocations
               responses: {}
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
   GetRequestsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: !Sub
+      Description:
+        Fn::Sub:
         - Stack ${AWS::StackName} Function ${ResourceName}
         - ResourceName: GetRequestsFunction
-      CodeUri: src/GetRequestsFunction
+      CodeUri: GetRequestsFunction
       Handler: handler.handler
       Runtime: python3.9
       MemorySize: 3008
@@ -56,30 +61,40 @@ Resources:
       Tracing: Active
       Environment:
         Variables:
-          TABLE_NAME: !Ref requests
-          TABLE_ARN: !GetAtt requests.Arn
+          TABLE_NAME:
+            Ref: requests
+          TABLE_ARN:
+            Fn::GetAtt:
+            - requests
+            - Arn
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref requests
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: requests
       Events:
         MarketplaceAPIGETrequestid:
           Type: Api
           Properties:
             Path: /request/{id}
             Method: GET
-            RestApiId: !Ref MarketplaceAPI
+            RestApiId:
+              Ref: MarketplaceAPI
+    Metadata:
+      SamResourceId: GetRequestsFunction
   GetRequestsFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${GetRequestsFunction}
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${GetRequestsFunction}
   UpdateRequestsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: !Sub
+      Description:
+        Fn::Sub:
         - Stack ${AWS::StackName} Function ${ResourceName}
         - ResourceName: UpdateRequestsFunction
-      CodeUri: src/UpdateRequestsFunction
+      CodeUri: UpdateRequestsFunction
       Handler: handler.handler
       Runtime: python3.9
       MemorySize: 3008
@@ -87,72 +102,95 @@ Resources:
       Tracing: Active
       Environment:
         Variables:
-          TABLE_NAME: !Ref requests
-          TABLE_ARN: !GetAtt requests.Arn
+          TABLE_NAME:
+            Ref: requests
+          TABLE_ARN:
+            Fn::GetAtt:
+            - requests
+            - Arn
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref requests
-        - Statement:
-            - Effect: Allow
-              Action:
-                - events:PutEvents
-              Resource:
-                - !GetAtt MarketplaceCustomEventBus.Arn
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: requests
+      - Statement:
+        - Effect: Allow
+          Action:
+          - events:PutEvents
+          Resource:
+          - Fn::GetAtt:
+            - MarketplaceCustomEventBus
+            - Arn
       Events:
         MarketplaceAPIPOSTrequestid:
           Type: Api
           Properties:
             Path: /request/{id}
             Method: POST
-            RestApiId: !Ref MarketplaceAPI
+            RestApiId:
+              Ref: MarketplaceAPI
+    Metadata:
+      SamResourceId: UpdateRequestsFunction
   UpdateRequestsFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${UpdateRequestsFunction}
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${UpdateRequestsFunction}
   requests:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
+      - AttributeName: id
+        AttributeType: S
       BillingMode: PAY_PER_REQUEST
       KeySchema:
-        - AttributeName: id
-          KeyType: HASH
+      - AttributeName: id
+        KeyType: HASH
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
   Update3rdPartyFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: !Sub
+      Description:
+        Fn::Sub:
         - Stack ${AWS::StackName} Function ${ResourceName}
         - ResourceName: Update3rdPartyFunction
-      CodeUri: src/Update3rdPartyFunction
+      CodeUri: Update3rdPartyFunction
       Handler: handler.handler
       Runtime: python3.9
       MemorySize: 3008
       Timeout: 30
       Tracing: Active
+    Metadata:
+      SamResourceId: Update3rdPartyFunction
   Update3rdPartyFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Update3rdPartyFunction}
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${Update3rdPartyFunction}
   UpdateInstitutionToUpdate3rdPartyFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt Update3rdPartyFunction.Arn
-      Principal: !Sub events.${AWS::URLSuffix}
-      SourceArn: !GetAtt Update3rdPartyFunction.Arn
+      FunctionName:
+        Fn::GetAtt:
+        - Update3rdPartyFunction
+        - Arn
+      Principal:
+        Fn::Sub: events.${AWS::URLSuffix}
+      SourceArn:
+        Fn::GetAtt:
+        - Update3rdPartyFunction
+        - Arn
   ThirdrdPartyAPI:
     Type: AWS::Serverless::Function
     Properties:
-      Description: !Sub
+      Description:
+        Fn::Sub:
         - Stack ${AWS::StackName} Function ${ResourceName}
         - ResourceName: ThirdrdPartyAPI
-      CodeUri: src/3rdPartyAPI
+      CodeUri: ThirdrdPartyAPI
       Handler: handler.handler
       Runtime: python3.9
       MemorySize: 3008
@@ -160,25 +198,42 @@ Resources:
       Tracing: Active
       Environment:
         Variables: {}
+    Metadata:
+      SamResourceId: ThirdrdPartyAPI
   ThirdrdPartyAPILogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${ThirdrdPartyAPI}
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${ThirdrdPartyAPI}
   ToThirdrdPartyAPIWitsToInstitutionAPIPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt ThirdrdPartyAPI.Arn
-      Principal: !Sub events.${AWS::URLSuffix}
-      SourceArn: !GetAtt To3rdParty2API.Arn
+      FunctionName:
+        Fn::GetAtt:
+        - ThirdrdPartyAPI
+        - Arn
+      Principal:
+        Fn::Sub: events.${AWS::URLSuffix}
+      SourceArn:
+        Fn::GetAtt:
+        - To3rdParty2API
+        - Arn
   ToThirdrdPartyAPIUnisaToInstitutionAPIPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt ThirdrdPartyAPI.Arn
-      Principal: !Sub events.${AWS::URLSuffix}
-      SourceArn: !GetAtt To3rdParty1API.Arn
+      FunctionName:
+        Fn::GetAtt:
+        - ThirdrdPartyAPI
+        - Arn
+      Principal:
+        Fn::Sub: events.${AWS::URLSuffix}
+      SourceArn:
+        Fn::GetAtt:
+        - To3rdParty1API
+        - Arn
   UsersSNSTopic:
     Type: AWS::SNS::Topic
   To3rdParty1API:
@@ -187,66 +242,67 @@ Resources:
       EventPattern:
         detail:
           institute:
-            - 3rdParty1
+          - 3rdParty1
       EventBusName: marketplace
       Targets:
-        - Id: !Ref ThirdrdPartyAPI
-          Arn: !GetAtt ThirdrdPartyAPI.Arn
+      - Id:
+          Ref: ThirdrdPartyAPI
+        Arn:
+          Fn::GetAtt:
+          - ThirdrdPartyAPI
+          - Arn
   To3rdParty2API:
     Type: AWS::Events::Rule
     Properties:
       EventPattern:
         detail:
           institute:
-            - 3rdParty2
+          - 3rdParty2
       EventBusName: marketplace
       Targets:
-        - Id: !Ref ThirdrdPartyAPI
-          Arn: !GetAtt ThirdrdPartyAPI.Arn
+      - Id:
+          Ref: ThirdrdPartyAPI
+        Arn:
+          Fn::GetAtt:
+          - ThirdrdPartyAPI
+          - Arn
   ThirdPartytoMarketplaceSNS:
     Type: AWS::Events::Rule
     Properties:
       EventPattern:
         Source:
-          - com.marketplace.3rdparty1
+        - com.marketplace.3rdparty1
         DetailType:
-          - marketplace status update
+        - marketplace status update
         detail:
           institute:
-            - 3rdparty1
+          - 3rdparty1
       Targets:
-        - Id: UsersSNSTopic
-          Arn: !Ref UsersSNSTopic
+      - Id: UsersSNSTopic
+        Arn:
+          Ref: UsersSNSTopic
       EventBusName: marketplace
   Update3rdParty:
     Type: AWS::Events::Rule
     Properties:
       EventPattern:
         source:
-          - aws.health
+        - aws.health
       Targets:
-        - Id: !Ref Update3rdPartyFunction
-          Arn: !GetAtt Update3rdPartyFunction.Arn
+      - Id:
+          Ref: Update3rdPartyFunction
+        Arn:
+          Fn::GetAtt:
+          - Update3rdPartyFunction
+          - Arn
       EventBusName: marketplace
 Metadata:
   AWS::Composer::Groups:
     Group:
       Label: EventBridge
       Members:
-        - MarketplaceCustomEventBus
-        - Update3rdParty
-        - ThirdPartytoMarketplaceSNS
-        - To3rdParty2API
-        - To3rdParty1API
-    Group2:
-      Label: Group2
-      Members:
-        - UpdateInstitutionToUpdate3rdPartyFunctionPermission
-        - Update3rdPartyFunction
-    Group3:
-      Label: EventGateway
-      Members:
-        - MarketplaceAPI
-        - GetRequestsFunction
-        - UpdateRequestsFunction
-        - requests
+      - MarketplaceCustomEventBus
+      - Update3rdParty
+      - ThirdPartytoMarketplaceSNS
+      - To3rdParty2API
+      - To3rdParty1API
