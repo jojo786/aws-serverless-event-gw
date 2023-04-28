@@ -25,6 +25,8 @@ Resources:
         - ${ResourceName} From Stack ${AWS::StackName}
         - ResourceName: MarketplaceAPI
       StageName: Prod
+      Auth:
+        ApiKeyRequired: true
       DefinitionBody:
         openapi: '3.0'
         info: {}
@@ -79,6 +81,8 @@ Resources:
             Method: GET
             RestApiId:
               Ref: MarketplaceAPI
+            Auth:
+              ApiKeyRequired: true
     Metadata:
       SamResourceId: GetRequestsFunction
   GetRequestsFunctionLogGroup:
@@ -161,6 +165,18 @@ Resources:
       MemorySize: 3008
       Timeout: 30
       Tracing: Active
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: requests
+          TABLE_ARN:
+            Fn::GetAtt:
+            - requests
+            - Arn
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: requests
     Metadata:
       SamResourceId: Update3rdPartyFunction
   Update3rdPartyFunctionLogGroup:
@@ -169,7 +185,7 @@ Resources:
     Properties:
       LogGroupName:
         Fn::Sub: /aws/lambda/${Update3rdPartyFunction}
-  UpdateInstitutionToUpdate3rdPartyFunctionPermission:
+  Update3rdpartyToUpdate3rdPartyFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
@@ -197,7 +213,17 @@ Resources:
       Timeout: 30
       Tracing: Active
       Environment:
-        Variables: {}
+        Variables:
+          TABLE_NAME:
+            Ref: requests
+          TABLE_ARN:
+            Fn::GetAtt:
+            - requests
+            - Arn
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: requests
     Metadata:
       SamResourceId: ThirdrdPartyAPI
   ThirdrdPartyAPILogGroup:
@@ -206,7 +232,7 @@ Resources:
     Properties:
       LogGroupName:
         Fn::Sub: /aws/lambda/${ThirdrdPartyAPI}
-  ToThirdrdPartyAPIWitsToInstitutionAPIPermission:
+  ToThirdrdPartyAPI3rdparty2To3rdpartyAPIPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
@@ -220,7 +246,7 @@ Resources:
         Fn::GetAtt:
         - To3rdParty2API
         - Arn
-  ToThirdrdPartyAPIUnisaToInstitutionAPIPermission:
+  ToThirdrdPartyAPI3rdparty1To3rdpartyAPIPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
@@ -241,7 +267,7 @@ Resources:
     Properties:
       EventPattern:
         detail:
-          institute:
+          3rdparty:
           - 3rdParty1
       EventBusName: marketplace
       Targets:
@@ -256,7 +282,7 @@ Resources:
     Properties:
       EventPattern:
         detail:
-          institute:
+          3rdparty:
           - 3rdParty2
       EventBusName: marketplace
       Targets:
@@ -275,7 +301,7 @@ Resources:
         DetailType:
         - marketplace status update
         detail:
-          institute:
+          3rdparty:
           - 3rdparty1
       Targets:
       - Id: UsersSNSTopic
@@ -306,3 +332,21 @@ Metadata:
       - ThirdPartytoMarketplaceSNS
       - To3rdParty2API
       - To3rdParty1API
+    Group3:
+      Label: EventGateway
+      Members:
+      - MarketplaceAPI
+      - GetRequestsFunction
+      - UpdateRequestsFunction
+      - requests
+    Group4:
+      Label: SNS
+      Members:
+      - EventBridgeToToSnsPolicy
+      - UsersSNSTopic
+    Group2:
+      Label: 3rdParty
+      Members:
+      - Update3rdpartyToUpdate3rdPartyFunctionPermission
+      - Update3rdPartyFunction
+      - ThirdrdPartyAPI

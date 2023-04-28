@@ -2,7 +2,7 @@
     {
       "Source": "com.marketplace.market",
       "EventBusName": "marketplace",
-      "Detail": "{ \"user_id\": \"123456789\", \"3rdparty\": \"3rdparty1\", \"requests1\": \"books\", \"requests2\": \"pens\"}",
+      "Detail": "{ \"user_id\": \"123456789\", \"request_status\": \"new\", \"3rdparty\": \"3rdParty1\", \"requests1\": \"books\", \"requests2\": \"pens\"}",
       "DetailType": "marketplace requests"
     }
   ]

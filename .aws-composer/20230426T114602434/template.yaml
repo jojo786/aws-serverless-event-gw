@@ -1,12 +1,4 @@
 Transform: AWS::Serverless-2016-10-31
-Globals:
-  Function:
-    MemorySize: 3008
-    Timeout: 30
-    Runtime: python3.10
-    Tracing: Active
-    Architectures:
-      - arm64
 Resources:
   EventBridgeToToSnsPolicy:
     Type: AWS::SNS::TopicPolicy
@@ -31,8 +23,6 @@ Resources:
         - ${ResourceName} From Stack ${AWS::StackName}
         - ResourceName: MarketplaceAPI
       StageName: Prod
-      Auth:
-        ApiKeyRequired: true 
       DefinitionBody:
         openapi: '3.0'
         info: {}
@@ -60,6 +50,10 @@ Resources:
         - ResourceName: GetRequestsFunction
       CodeUri: src/GetRequestsFunction
       Handler: handler.handler
+      Runtime: python3.9
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
       Environment:
         Variables:
           TABLE_NAME: !Ref requests
@@ -74,8 +68,6 @@ Resources:
             Path: /request/{id}
             Method: GET
             RestApiId: !Ref MarketplaceAPI
-            Auth:
-              ApiKeyRequired: true
   GetRequestsFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -89,6 +81,10 @@ Resources:
         - ResourceName: UpdateRequestsFunction
       CodeUri: src/UpdateRequestsFunction
       Handler: handler.handler
+      Runtime: python3.9
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
       Environment:
         Variables:
           TABLE_NAME: !Ref requests
@@ -134,19 +130,16 @@ Resources:
         - ResourceName: Update3rdPartyFunction
       CodeUri: src/Update3rdPartyFunction
       Handler: handler.handler
-      Environment:
-        Variables:
-          TABLE_NAME: !Ref requests
-          TABLE_ARN: !GetAtt requests.Arn
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref requests
+      Runtime: python3.9
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
   Update3rdPartyFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     Properties:
       LogGroupName: !Sub /aws/lambda/${Update3rdPartyFunction}
-  Update3rdpartyToUpdate3rdPartyFunctionPermission:
+  UpdateInstitutionToUpdate3rdPartyFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
@@ -161,26 +154,25 @@ Resources:
         - ResourceName: ThirdrdPartyAPI
       CodeUri: src/3rdPartyAPI
       Handler: handler.handler
+      Runtime: python3.9
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
       Environment:
-        Variables:
-          TABLE_NAME: !Ref requests
-          TABLE_ARN: !GetAtt requests.Arn
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref requests
+        Variables: {}
   ThirdrdPartyAPILogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     Properties:
       LogGroupName: !Sub /aws/lambda/${ThirdrdPartyAPI}
-  ToThirdrdPartyAPI3rdparty2To3rdpartyAPIPermission:
+  ToThirdrdPartyAPIWitsToInstitutionAPIPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt ThirdrdPartyAPI.Arn
       Principal: !Sub events.${AWS::URLSuffix}
       SourceArn: !GetAtt To3rdParty2API.Arn
-  ToThirdrdPartyAPI3rdparty1To3rdpartyAPIPermission:
+  ToThirdrdPartyAPIUnisaToInstitutionAPIPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
@@ -194,7 +186,7 @@ Resources:
     Properties:
       EventPattern:
         detail:
-          3rdparty:
+          institute:
             - 3rdParty1
       EventBusName: marketplace
       Targets:
@@ -205,7 +197,7 @@ Resources:
     Properties:
       EventPattern:
         detail:
-          3rdparty:
+          institute:
             - 3rdParty2
       EventBusName: marketplace
       Targets:
@@ -220,7 +212,7 @@ Resources:
         DetailType:
           - marketplace status update
         detail:
-          3rdparty:
+          institute:
             - 3rdparty1
       Targets:
         - Id: UsersSNSTopic
@@ -246,6 +238,11 @@ Metadata:
         - ThirdPartytoMarketplaceSNS
         - To3rdParty2API
         - To3rdParty1API
+    Group2:
+      Label: Group2
+      Members:
+        - UpdateInstitutionToUpdate3rdPartyFunctionPermission
+        - Update3rdPartyFunction
     Group3:
       Label: EventGateway
       Members:
@@ -253,14 +250,3 @@ Metadata:
         - GetRequestsFunction
         - UpdateRequestsFunction
         - requests
-    Group4:
-      Label: SNS
-      Members:
-        - EventBridgeToToSnsPolicy
-        - UsersSNSTopic
-    Group2:
-      Label: 3rdParty
-      Members:
-        - Update3rdpartyToUpdate3rdPartyFunctionPermission
-        - Update3rdPartyFunction
-        - ThirdrdPartyAPI
