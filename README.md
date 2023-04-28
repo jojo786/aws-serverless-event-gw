@@ -1,2 +1,6 @@
 # aws-serverless-event-gw
-Serverless Event Gateway Pattern: Internal Event-Driven system with API GW to external customers
+HOW TO INTEGRATE YOUR AWS EVENT-BASED SYSTEM WITH EXTERNAL/LEGACY SYSTEMS USING RESTFUL APISomers
+
+Read the [Blog Post](https://hacksaw.co.za/blog/using-events-internally-and-apis-externally/)
+
+![architecture](Image-ApplicationComposer.jpg)
