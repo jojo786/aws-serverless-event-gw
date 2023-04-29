@@ -7,6 +7,10 @@ Globals:
     Tracing: Active
     Architectures:
     - arm64
+Parameters:
+  WebhookSiteURL:
+    Type: String
+    Default: https://webhook.site/6d435fd3-19f7-45b7-b67a-813833e6a46b
 Resources:
   EventBridgeToToSnsPolicy:
     Type: AWS::SNS::TopicPolicy
@@ -56,6 +60,10 @@ Resources:
               responses: {}
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Enabled: true
   UsagePlan:
     Type: AWS::ApiGateway::UsagePlan
     Properties:
@@ -63,10 +71,6 @@ Resources:
       - ApiId:
           Ref: MarketplaceAPI
         Stage: Prod
-  ApiKey:
-    Type: AWS::ApiGateway::ApiKey
-    Properties:
-      Enabled: true
   UsagePlanKey:
     Type: AWS::ApiGateway::UsagePlanKey
     Properties:
@@ -273,6 +277,50 @@ Resources:
         - Arn
   UsersSNSTopic:
     Type: AWS::SNS::Topic
+  WebhookSiteConnection:
+    Type: AWS::Events::Connection
+    Properties:
+      AuthorizationType: API_KEY
+      Description: WebhookSite connection with an API key
+      AuthParameters:
+        ApiKeyAuthParameters:
+          ApiKeyName: apikey
+          ApiKeyValue: apivalue
+  WebhookSiteDestination:
+    Type: AWS::Events::ApiDestination
+    Properties:
+      Name: WebhookSite
+      ConnectionArn:
+        Fn::GetAtt:
+        - WebhookSiteConnection
+        - Arn
+      InvocationEndpoint:
+        Ref: WebhookSiteURL
+      HttpMethod: POST
+      InvocationRateLimitPerSecond: 10
+  EventBridgeTargetRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - events.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+      - PolicyName: AllowAPIdestinationAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: events:InvokeApiDestination
+            Resource:
+              Fn::GetAtt:
+              - WebhookSiteDestination
+              - Arn
   To3rdParty1API:
     Type: AWS::Events::Rule
     Properties:
@@ -288,6 +336,15 @@ Resources:
           Fn::GetAtt:
           - ThirdrdPartyAPI
           - Arn
+      - Arn:
+          Fn::GetAtt:
+          - WebhookSiteDestination
+          - Arn
+        RoleArn:
+          Fn::GetAtt:
+          - EventBridgeTargetRole
+          - Arn
+        Id: WebhookSiteDestination
   To3rdParty2API:
     Type: AWS::Events::Rule
     Properties:
@@ -303,6 +360,15 @@ Resources:
           Fn::GetAtt:
           - ThirdrdPartyAPI
           - Arn
+      - Arn:
+          Fn::GetAtt:
+          - WebhookSiteDestination
+          - Arn
+        RoleArn:
+          Fn::GetAtt:
+          - EventBridgeTargetRole
+          - Arn
+        Id: WebhookSiteDestination
   ThirdPartytoMarketplaceSNS:
     Type: AWS::Events::Rule
     Properties:
