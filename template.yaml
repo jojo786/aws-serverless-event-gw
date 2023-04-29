@@ -10,7 +10,7 @@ Globals:
 Parameters:
   WebhookSiteURL:
     Type: String
-    Default: 'https://webhook.site/6d435fd3-19f7-45b7-b67a-813833e6a46b'
+    Default: 'https://webhook.site/YOURSITEHERE'
 Resources:
   EventBridgeToToSnsPolicy:
     Type: AWS::SNS::TopicPolicy
