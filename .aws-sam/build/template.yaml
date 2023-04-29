@@ -1,4 +1,12 @@
 Transform: AWS::Serverless-2016-10-31
+Globals:
+  Function:
+    MemorySize: 3008
+    Timeout: 30
+    Runtime: python3.10
+    Tracing: Active
+    Architectures:
+    - arm64
 Resources:
   EventBridgeToToSnsPolicy:
     Type: AWS::SNS::TopicPolicy
@@ -48,6 +56,25 @@ Resources:
               responses: {}
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      ApiStages:
+      - ApiId:
+          Ref: MarketplaceAPI
+        Stage: Prod
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Enabled: true
+  UsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId:
+        Ref: ApiKey
+      KeyType: API_KEY
+      UsagePlanId:
+        Ref: UsagePlan
   GetRequestsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -57,10 +84,6 @@ Resources:
         - ResourceName: GetRequestsFunction
       CodeUri: GetRequestsFunction
       Handler: handler.handler
-      Runtime: python3.9
-      MemorySize: 3008
-      Timeout: 30
-      Tracing: Active
       Environment:
         Variables:
           TABLE_NAME:
@@ -100,10 +123,6 @@ Resources:
         - ResourceName: UpdateRequestsFunction
       CodeUri: UpdateRequestsFunction
       Handler: handler.handler
-      Runtime: python3.9
-      MemorySize: 3008
-      Timeout: 30
-      Tracing: Active
       Environment:
         Variables:
           TABLE_NAME:
@@ -161,10 +180,6 @@ Resources:
         - ResourceName: Update3rdPartyFunction
       CodeUri: Update3rdPartyFunction
       Handler: handler.handler
-      Runtime: python3.9
-      MemorySize: 3008
-      Timeout: 30
-      Tracing: Active
       Environment:
         Variables:
           TABLE_NAME:
@@ -208,10 +223,6 @@ Resources:
         - ResourceName: ThirdrdPartyAPI
       CodeUri: ThirdrdPartyAPI
       Handler: handler.handler
-      Runtime: python3.9
-      MemorySize: 3008
-      Timeout: 30
-      Tracing: Active
       Environment:
         Variables:
           TABLE_NAME:

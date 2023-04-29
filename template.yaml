@@ -52,6 +52,22 @@ Resources:
               responses: {}
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties: 
+      ApiStages: 
+        - ApiId: !Ref MarketplaceAPI
+          Stage: Prod
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties: 
+      Enabled: True
+  UsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref UsagePlan
   GetRequestsFunction:
     Type: AWS::Serverless::Function
     Properties:
