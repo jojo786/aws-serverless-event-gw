@@ -6,6 +6,7 @@ Read the [Blog Post](https://hacksaw.co.za/blog/use-events-internally-and-apis-e
 ![architecture](Image-ApplicationComposer.jpg)
 
 ## How to run it
+- Modify the value of `WebhookSiteURL` in [SAM template](https://github.com/jojo786/aws-serverless-event-gw/blob/main/template.yaml) with your chosen API Destination
 - [Load template into AWS Application Composer](https://docs.aws.amazon.com/application-composer/latest/dg/using-composer-project.html)
 - Use [AWS SAM](https://aws.amazon.com/serverless/sam/) to build and deploy to AWS:
 
@@ -23,3 +24,7 @@ For future deploys, you can just run:
 ```bash
 sam build && sam deploy
 ```
+
+## To Test
+- Injest an event into EventBridge with `aws events put-events --entries file://event.json`, which will save it to DynamoDB, and post it to the APIDestination
+- Retrieve the event from API Gateway with `curl https://fdgfdg435.execute-api.af-south-1.amazonaws.com/Prod/request/123456789 -H "x-api-key: rtreter5656dgdfg"` where you replace the correct values for the APIGW and APIKEY
