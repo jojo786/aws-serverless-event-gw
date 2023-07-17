@@ -27,4 +27,4 @@ sam build && sam deploy
 
 ## To Test
 - Injest an event into EventBridge with `aws events put-events --entries file://event.json`, which will save it to DynamoDB, and post it to the APIDestination
-- Retrieve the event from API Gateway with `curl https://fdgfdg435.execute-api.af-south-1.amazonaws.com/Prod/request/123456789 -H "x-api-key: rtreter5656dgdfg"` where you replace the correct values for the APIGW and APIKEY
+- Retrieve the event from API Gateway with `curl https://{APIGW}.amazonaws.com/Prod/request/123456789 -H "x-api-key: {APIKEY}"` where you replace the correct values for the APIGW and APIKEY
