@@ -3,14 +3,14 @@ Globals:
   Function:
     MemorySize: 3008
     Timeout: 30
-    Runtime: python3.10
+    Runtime: python3.11
     Tracing: Active
     Architectures:
     - arm64
 Parameters:
   WebhookSiteURL:
     Type: String
-    Default: https://webhook.site/6d435fd3-19f7-45b7-b67a-813833e6a46b
+    Default: https://webhook.site/YOURSITEHERE
 Resources:
   EventBridgeToToSnsPolicy:
     Type: AWS::SNS::TopicPolicy
@@ -399,6 +399,11 @@ Resources:
           - Update3rdPartyFunction
           - Arn
       EventBusName: marketplace
+Outputs:
+  AppApiEndpoint:
+    Description: API Endpoint
+    Value:
+      Fn::Sub: https://${AppApi}.execute-api.${AWS::Region}.amazonaws.com/Prod
 Metadata:
   AWS::Composer::Groups:
     Group:
